@@ -1,0 +1,2 @@
+*.sh text eol=lf
+appliance/04-edge510-pic text eol=lf

@@ -1,0 +1,11 @@
+artifacts/
+GeorgeValdez.Edge510Installer/bin/
+GeorgeValdez.Edge510Installer/obj/
+work/
+*.img
+*.img.bz2
+*.rom
+*.bin
+*.sig
+*.pub
+*.log

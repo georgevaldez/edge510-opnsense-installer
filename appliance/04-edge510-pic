@@ -1,0 +1,120 @@
+#!/bin/sh
+# George Valdez · OPNsense en el VeloCloud Edge 510
+# Ruta de instalación: /usr/local/etc/rc.syshook.d/early/04-edge510-pic
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
+export PATH
+set -eu
+
+[ "$(uname -s)" = FreeBSD ] && [ -d /usr/local/opnsense ] || exit 1
+[ "$(kenv smbios.system.product)" = EDGE510 ] || exit 1
+[ "$(kenv smbios.bios.version)" = VELOCLOUD-EDGE-01.00.00.05 ] || exit 1
+kldload -n ichsmb
+kldload -n ismt
+kldload -n smb
+pciconf -l | grep -Eq '^ismt0@pci0:0:19:0:.*(chip=0x1f158086|vendor=0x8086 device=0x1f15)' || exit 1
+
+find_pic_bus()
+{
+    local found= device number parent controller
+    for device in /dev/smb[0-9]*; do
+        [ -c "$device" ] || continue
+        number=${device#/dev/smb}
+        parent=$(sysctl -n "dev.smb.$number.%parent") || continue
+        controller=$(sysctl -n "dev.smbus.${parent#smbus}.%parent") || continue
+        [ "$controller" = ismt0 ] || continue
+        [ -z "$found" ] || return 1
+        found=$device
+    done
+    [ -c "$found" ] || return 1
+    printf '%s' "$found"
+}
+bus=$(find_pic_bus)
+
+if [ "${1:-}" = "--check" ]; then
+    printf 'Bus del PIC: %s\n' "$bus"
+    printf 'Canales verde y rojo: '
+    smbmsg -f "$bus" -s 0x40 -c 0 -w -i 2
+    exit 0
+fi
+
+if [ "${1:-}" != "--run" ]; then
+    exec daemon -f -p /var/run/edge510-pic.pid /bin/sh "$0" --run
+fi
+
+# El watchdog se desactiva y verifica en la preparación de la instalación.
+# Este servicio consulta su estado y controla únicamente la luz.
+tick=0
+state=starting
+ready_once=0
+failures=0
+resets=0
+previous=
+last_rgb=
+while :; do
+    if [ $((tick % 15)) -eq 0 ]; then
+        if counter=$(smbmsg -f "$bus" -s 0x44 -c 0 -w -i 2 2>/dev/null) && [ "$counter" = 0x0000 ]; then
+            failures=0
+        else
+            failures=$((failures + 1))
+        fi
+    fi
+    if [ $((tick % 15)) -eq 0 ]; then
+        if curl --noproxy '*' -ksf --connect-timeout 1 --max-time 2 https://127.0.0.1/ -o /dev/null; then
+            ready_once=1
+            state=ready
+        elif [ "$ready_once" -eq 1 ] || [ "$tick" -ge 240 ]; then
+            state=error
+        else
+            state=starting
+        fi
+        if [ "$state" = ready ] && ! ifconfig igb0 | grep -q 'status: active'; then state=warning; fi
+    fi
+    if [ "$failures" -ge 2 ] && [ "$ready_once" -eq 1 ] && [ "$resets" -lt 3 ]; then
+        resets=$((resets + 1))
+        logger -t edge510-pic "Recuperando controlador iSMT, intento $resets"
+        if kldunload ismt && kldload ismt; then
+            sleep 1
+            if recovered=$(find_pic_bus); then
+                bus=$recovered
+                last_rgb=
+            fi
+        fi
+    fi
+    if [ "$failures" -gt 0 ]; then
+        color=error
+    else
+        color=$state
+    fi
+    if [ "$previous" != "$color" ]; then
+        logger -t edge510-pic "Estado $color, fallos PIC $failures"
+        previous=$color
+    fi
+    case "$color" in
+        starting)
+            # Azul, violeta y ámbar, con subida y bajada de intensidad.
+            phase=$((tick % 24))
+            case $((phase % 8)) in
+                0|7) level=8 ;; 1|6) level=24 ;;
+                2|5) level=64 ;; 3|4) level=128 ;;
+            esac
+            case $((phase / 8)) in
+                0) red=0; green=0; blue=$level ;;
+                1) red=$level; green=0; blue=$level ;;
+                2) red=$level; green=$((level / 2)); blue=0 ;;
+            esac
+            ;;
+        ready) red=0; green=128; blue=0 ;;
+        warning) red=128; green=64; blue=0 ;;
+        error) red=128; green=0; blue=0 ;;
+    esac
+    if [ "$color" = starting ] || [ "$last_rgb" != "$red,$green,$blue" ]; then
+        if smbmsg -f "$bus" -s 0x40 -c "$red" -w -o 2 "$((green + blue * 256))" 2>/dev/null; then
+            last_rgb="$red,$green,$blue"
+        else
+            failures=$((failures + 1))
+        fi
+    fi
+    tick=$((tick + 1))
+    sleep 1
+done

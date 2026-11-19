@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Edge510-OPNsense-Installer</AssemblyName>
+    <RootNamespace>GeorgeValdez.Edge510Installer</RootNamespace>
+    <Version>0.2.3</Version>
+    <Authors>George Valdez</Authors>
+    <Company>George Valdez</Company>
+    <Product>Edge 510 · Asistente OPNsense</Product>
+    <Description>Asistente seguro en español para preparar OPNsense en VMware VeloCloud Edge 510.</Description>
+    <Copyright>Copyright © 2026 George Valdez</Copyright>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpCompress" Version="0.50.9" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
+    <PackageReference Include="SSH.NET" Version="2026.0.1" />
+    <EmbeddedResource Include="..\appliance\*.sh" />
+    <EmbeddedResource Include="..\appliance\04-edge510-pic" />
+    <EmbeddedResource Include="..\appliance\uart1-patch.json" />
+    <EmbeddedResource Include="..\appliance\admin-network.php" />
+  </ItemGroup>
+</Project>
