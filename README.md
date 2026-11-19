@@ -4,18 +4,18 @@ Aplicación Windows en español, desarrollada por **George Valdez**, para guiar 
 
 ## Flujo del asistente
 
-1. **Elegir USB:** abre una ventana de Windows y selecciona la memoria por modelo, capacidad y letra. Solo aparecen unidades USB disponibles.
+1. **Consola y USB:** conecta primero el puerto COM del Edge. Después selecciona la memoria en una ventana de Windows por modelo, capacidad y serie. Sin ambas conexiones no se puede continuar.
 2. **Descargar OPNsense:** descarga la imagen Serial oficial, verifica su firma y prepara la consola UART1 del Edge.
 3. **Crear USB:** revisa la unidad, confirma el borrado y espera la grabación con lectura de verificación.
 4. **Instalar en el Edge:** conecta y respalda el equipo, autoriza el destino y comprueba el arranque interno sin USB durante más de diez minutos.
 
-La consola, el diagnóstico y los detalles técnicos se encuentran en secciones desplegables del último paso.
+La consola y su ayuda están en el primer paso. La instalación reúne los botones Respaldar, Instalar y Verificar en una sola fila. El informe permanece visible en un área de altura limitada. Abrir el puerto confirma su disponibilidad; la salida serial permite comprobar que el Edge responde.
 
 El programa usa la contraseña de root en memoria durante la sesión SSH con el Edge. Mantiene los registros y respaldos localmente en `%LOCALAPPDATA%\GeorgeValdez\Edge510OPNsense`. La grabación del USB requiere elevación y borra ese USB. La preparación guarda los dos bytes originales del watchdog del PIC y los desactiva con verificación de lectura. La instalación interna requiere un respaldo completo verificado y autorización sobre el destino identificado. El BIOS existente permite arrancar esta conversión.
 
 ## Descargar
 
-Descarga el [ejecutable Windows x64 v0.3.0](https://github.com/georgevaldez/edge510-opnsense-installer/releases/download/v0.3.0/Edge510-OPNsense-Installer.exe) o abre la [página de versiones](https://github.com/georgevaldez/edge510-opnsense-installer/releases).
+Descarga el [ejecutable Windows x64 v0.3.1](https://github.com/georgevaldez/edge510-opnsense-installer/releases/download/v0.3.1/Edge510-OPNsense-Installer.exe) o abre la [página de versiones](https://github.com/georgevaldez/edge510-opnsense-installer/releases).
 
 La compilación portable para Windows x64 está en `release/Edge510-OPNsense-Installer.exe`. Es un único ejecutable con .NET 10 incluido; no requiere instalar el runtime. En Windows, ejecuta como usuario normal para diagnóstico y preparación. La aplicación avisa cuando necesite permisos elevados para escribir el USB. El ejecutable no está firmado con un certificado comercial, por lo que Windows puede mostrar una advertencia de SmartScreen.
 

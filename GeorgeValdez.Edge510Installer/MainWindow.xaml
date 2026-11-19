@@ -27,7 +27,7 @@
                             <Border x:Name="Dot1" Width="26" Height="26" CornerRadius="13" Background="#34454C" VerticalAlignment="Center">
                                 <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
                             </Border>
-                            <TextBlock Grid.Column="1" Text="Elegir USB" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14"/>
+                            <TextBlock Grid.Column="1" Text="Consola y USB" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14"/>
                         </Grid>
                     </Button>
                     <Button x:Name="Nav2" Click="Nav_Click" Tag="1" Background="Transparent" Foreground="#C7D0D3"
