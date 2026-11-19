@@ -1,60 +1,91 @@
 <Window x:Class="GeorgeValdez.Edge510Installer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Edge 510 · Asistente OPNsense" Height="820" Width="1240" MinHeight="700" MinWidth="1000"
+        Title="Edge 510 · Asistente OPNsense" Height="760" Width="1140" MinHeight="640" MinWidth="920"
         WindowStartupLocation="CenterScreen" Background="{StaticResource Canvas}" FontFamily="Segoe UI" Foreground="{StaticResource Ink}">
     <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="270"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="#15242B">
-            <DockPanel LastChildFill="True" Margin="24">
-                <StackPanel DockPanel.Dock="Top" Margin="0,4,0,28">
-                    <Border Width="42" Height="42" CornerRadius="12" Background="#0B8274" HorizontalAlignment="Left">
-                        <TextBlock Text="E" FontSize="23" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <TextBlock Text="EDGE 510" FontSize="12" FontWeight="Bold" Foreground="#87D8C8" Margin="0,19,0,3"/>
-                    <TextBlock Text="Asistente OPNsense" FontSize="20" FontWeight="SemiBold" Foreground="White"/>
-                    <TextBlock Text="Instalación guiada y segura" FontSize="12" Foreground="#A5B4B9" Margin="0,5,0,0"/>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="252"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Background="#15242B">
+            <Grid Margin="20,30,20,22">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="10,0,0,32">
+                    <TextBlock Text="Edge 510" FontSize="24" FontWeight="SemiBold" Foreground="White"/>
+                    <TextBlock Text="Instalar OPNsense" FontSize="14" Foreground="#A5B4B9" Margin="0,6,0,0"/>
                 </StackPanel>
-                <StackPanel x:Name="NavSteps" DockPanel.Dock="Top">
-                    <Button x:Name="Nav1" Click="Nav_Click" Tag="0" Background="Transparent" Foreground="White" HorizontalContentAlignment="Left" Padding="10,12" Margin="0,2" FontWeight="Medium">
-                        <StackPanel Orientation="Horizontal"><Border x:Name="Dot1" Width="25" Height="25" CornerRadius="13" Background="#0B8274"><TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Preparar"/><TextBlock Text="Equipo y USB" FontSize="11" Foreground="#A5B4B9"/></StackPanel></StackPanel>
+                <StackPanel x:Name="NavSteps" Grid.Row="1">
+                    <Button x:Name="Nav1" Click="Nav_Click" Tag="0" Background="Transparent" Foreground="#C7D0D3"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Padding="12,0" Height="58" Margin="0,3">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border x:Name="Dot1" Width="26" Height="26" CornerRadius="13" Background="#34454C" VerticalAlignment="Center">
+                                <TextBlock Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="Elegir USB" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14"/>
+                        </Grid>
                     </Button>
-                    <Button x:Name="Nav2" Click="Nav_Click" Tag="1" Background="Transparent" Foreground="#C7D0D3" HorizontalContentAlignment="Left" Padding="10,12" Margin="0,2" FontWeight="Medium">
-                        <StackPanel Orientation="Horizontal"><Border x:Name="Dot2" Width="25" Height="25" CornerRadius="13" Background="#34454C"><TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Diagnóstico serial"/><TextBlock Text="Inventario solo lectura" FontSize="11" Foreground="#A5B4B9"/></StackPanel></StackPanel>
+                    <Button x:Name="Nav2" Click="Nav_Click" Tag="1" Background="Transparent" Foreground="#C7D0D3"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Padding="12,0" Height="58" Margin="0,3">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border x:Name="Dot2" Width="26" Height="26" CornerRadius="13" Background="#34454C" VerticalAlignment="Center">
+                                <TextBlock Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="Descargar OPNsense" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14"/>
+                        </Grid>
                     </Button>
-                    <Button x:Name="Nav3" Click="Nav_Click" Tag="2" Background="Transparent" Foreground="#C7D0D3" HorizontalContentAlignment="Left" Padding="10,12" Margin="0,2" FontWeight="Medium">
-                        <StackPanel Orientation="Horizontal"><Border x:Name="Dot3" Width="25" Height="25" CornerRadius="13" Background="#34454C"><TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Firmware y compatibilidad"/><TextBlock Text="Revisión antes de escribir" FontSize="11" Foreground="#A5B4B9"/></StackPanel></StackPanel>
+                    <Button x:Name="Nav3" Click="Nav_Click" Tag="2" Background="Transparent" Foreground="#C7D0D3"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Padding="12,0" Height="58" Margin="0,3">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border x:Name="Dot3" Width="26" Height="26" CornerRadius="13" Background="#34454C" VerticalAlignment="Center">
+                                <TextBlock Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="Crear USB" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14"/>
+                        </Grid>
                     </Button>
-                    <Button x:Name="Nav4" Click="Nav_Click" Tag="3" Background="Transparent" Foreground="#C7D0D3" HorizontalContentAlignment="Left" Padding="10,12" Margin="0,2" FontWeight="Medium">
-                        <StackPanel Orientation="Horizontal"><Border x:Name="Dot4" Width="25" Height="25" CornerRadius="13" Background="#34454C"><TextBlock Text="4" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Preparar OPNsense"/><TextBlock Text="Descarga y firma oficial" FontSize="11" Foreground="#A5B4B9"/></StackPanel></StackPanel>
-                    </Button>
-                    <Button x:Name="Nav5" Click="Nav_Click" Tag="4" Background="Transparent" Foreground="#C7D0D3" HorizontalContentAlignment="Left" Padding="10,12" Margin="0,2" FontWeight="Medium">
-                        <StackPanel Orientation="Horizontal"><Border x:Name="Dot5" Width="25" Height="25" CornerRadius="13" Background="#34454C"><TextBlock Text="5" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Crear USB"/><TextBlock Text="Borrado con doble confirmación" FontSize="11" Foreground="#A5B4B9"/></StackPanel></StackPanel>
-                    </Button>
-                    <Button x:Name="Nav6" Click="Nav_Click" Tag="5" Background="Transparent" Foreground="#C7D0D3" HorizontalContentAlignment="Left" Padding="10,12" Margin="0,2" FontWeight="Medium">
-                        <StackPanel Orientation="Horizontal"><Border x:Name="Dot6" Width="25" Height="25" CornerRadius="13" Background="#34454C"><TextBlock Text="6" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Convertir el Edge"/><TextBlock Text="Firmware y almacenamiento" FontSize="11" Foreground="#A5B4B9"/></StackPanel></StackPanel>
+                    <Button x:Name="Nav4" Click="Nav_Click" Tag="3" Background="Transparent" Foreground="#C7D0D3"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" Padding="12,0" Height="58" Margin="0,3">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <Border x:Name="Dot4" Width="26" Height="26" CornerRadius="13" Background="#34454C" VerticalAlignment="Center">
+                                <TextBlock Text="4" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12"/>
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="Instalar en el Edge" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="14"/>
+                        </Grid>
                     </Button>
                 </StackPanel>
-                <StackPanel DockPanel.Dock="Bottom" Margin="0,0,0,2">
-                    <Border Height="1" Background="#34454C" Margin="0,0,0,16"/>
-                    <TextBlock Text="Desarrollado por George Valdez" FontSize="11" Foreground="#C5D0D3"/>
-                    <TextBlock Text="Versión 0.1 · Windows 10/11" FontSize="10" Foreground="#829399" Margin="0,4,0,0"/>
+                <StackPanel Grid.Row="2" Margin="10,20,0,0">
+                    <TextBlock Text="George Valdez" FontSize="12" Foreground="#C5D0D3"/>
+                    <TextBlock x:Name="BuildVersion" FontSize="11" Foreground="#829399" Margin="0,5,0,0"/>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
         </Border>
-        <Grid Grid.Column="1" Margin="34,28,34,22">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-            <DockPanel Grid.Row="0" Margin="0,0,0,22">
-                <StackPanel DockPanel.Dock="Left"><TextBlock x:Name="Eyebrow" Text="PASO 1 DE 5" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Accent}"/><TextBlock x:Name="PageTitle" Text="Antes de empezar" FontSize="28" FontWeight="SemiBold" Margin="0,4,0,0"/></StackPanel>
-                <Border DockPanel.Dock="Right" Background="#FFF4DE" CornerRadius="18" Padding="12,7" VerticalAlignment="Center"><TextBlock Text="●  Modo seguro · sin escribir en el appliance" FontSize="11" FontWeight="SemiBold" Foreground="#805A16"/></Border>
-            </DockPanel>
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid Grid.Column="1" Margin="32,30,32,24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Margin="0,0,0,24">
+                <TextBlock x:Name="Eyebrow" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
+                <TextBlock x:Name="PageTitle" FontSize="28" FontWeight="SemiBold" Margin="0,7,0,0"/>
+            </StackPanel>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,12,0">
                 <StackPanel x:Name="PageHost"/>
             </ScrollViewer>
-            <DockPanel Grid.Row="2" Margin="0,18,0,0">
-                <TextBlock x:Name="StatusText" Text="Listo. Empieza con la revisión de Windows y el USB." Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button x:Name="BackButton" Content="Volver" Style="{StaticResource QuietButton}" Click="Back_Click" Margin="0,0,10,0"/><Button x:Name="NextButton" Content="Siguiente" Click="Next_Click"/></StackPanel>
-            </DockPanel>
+            <Grid Grid.Row="2" Margin="0,18,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <TextBlock x:Name="StatusText" Foreground="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,16,0" MaxHeight="50"/>
+                <Button Grid.Column="1" x:Name="BackButton" Content="Volver" Style="{StaticResource QuietButton}" Click="Back_Click" Margin="0,0,10,0"/>
+                <Button Grid.Column="2" x:Name="NextButton" Content="Continuar" Click="Next_Click"/>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

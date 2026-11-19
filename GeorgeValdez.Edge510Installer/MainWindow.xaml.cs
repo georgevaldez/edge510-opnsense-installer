@@ -39,6 +39,7 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
 """;
 
     private int _page;
+    private bool mediaBusy;
     private List<DiskInfo> _disks = [];
     private DiskInfo? _selectedDisk;
     private string? _imageFile;
@@ -47,8 +48,6 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
     private string _verifiedImageHash = "";
     private SerialPort? _serial;
     private string _targetSerial = "";
-    private ComboBox? _diskPicker;
-    private TextBox? _serialId;
     private ComboBox? _comPicker;
     private TextBox? _serialLog;
     private TextBox? _mediaStatus;
@@ -58,13 +57,14 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
         InitializeComponent();
         Closing += (_, e) =>
         {
-            if (internalBusy)
+            if (internalBusy || mediaBusy)
             {
                 e.Cancel = true;
-                SetStatus("Espera a que termine la operación del disco interno.");
+                SetStatus("Espera a que termine la operación en curso.");
             }
             else internalInstaller?.Dispose();
         };
+        BuildVersion.Text = "Versión " + (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "");
         Directory.CreateDirectory(AppFolder);
         ShowPage(0);
     }
@@ -75,144 +75,131 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
     }
 
     private void Back_Click(object sender, RoutedEventArgs e) => ShowPage(Math.Max(0, _page - 1));
-    private void Next_Click(object sender, RoutedEventArgs e) => ShowPage(Math.Min(5, _page + 1));
+    private void Next_Click(object sender, RoutedEventArgs e) => ShowPage(Math.Min(3, _page + 1));
 
     private void ShowPage(int page)
     {
-        if (internalBusy) return;
+        if (internalBusy || mediaBusy) return;
         _page = page;
-        var titles = new[] { "Antes de empezar", "Conectar y diagnosticar", "Revisar el firmware", "Preparar OPNsense", "Crear el USB", "Convertir el appliance" };
-        Eyebrow.Text = $"PASO {page + 1} DE 6";
+        var titles = new[] { "Elige tu memoria USB", "Prepara OPNsense", "Crea el USB de instalación", "Instala en tu Edge" };
+        Eyebrow.Text = $"PASO {page + 1} DE 4";
         PageTitle.Text = titles[page];
         BackButton.IsEnabled = page > 0;
-        NextButton.IsEnabled = page < 5;
-        NextButton.Content = page == 4 ? "Ver pasos del Edge" : page == 5 ? "Final" : "Siguiente";
-        var nav = new[] { Nav1, Nav2, Nav3, Nav4, Nav5, Nav6 };
-        var dots = new[] { Dot1, Dot2, Dot3, Dot4, Dot5, Dot6 };
+        NextButton.Visibility = page < 3 ? Visibility.Visible : Visibility.Collapsed;
+        NextButton.Content = page == 2 ? "Ir al Edge" : "Continuar";
+        var nav = new[] { Nav1, Nav2, Nav3, Nav4 };
+        var dots = new[] { Dot1, Dot2, Dot3, Dot4 };
         for (var i = 0; i < nav.Length; i++)
         {
             nav[i].Foreground = i == page ? Brushes.White : new SolidColorBrush(Color.FromRgb(199, 208, 211));
+            nav[i].Background = i == page ? new SolidColorBrush(Color.FromRgb(38, 63, 70)) : Brushes.Transparent;
             dots[i].Background = i == page ? new SolidColorBrush(Color.FromRgb(11, 130, 116)) : new SolidColorBrush(Color.FromRgb(52, 69, 76));
         }
         PageHost.Children.Clear();
         switch (page)
         {
             case 0: BuildStartPage(); break;
-            case 1: BuildSerialPage(); break;
-            case 2: BuildFirmwarePage(); break;
-            case 3: BuildImagePage(); break;
-            case 4: BuildUsbPage(); break;
-            case 5: BuildConversionPage(); break;
+            case 1: BuildImagePage(); break;
+            case 2: BuildUsbPage(); break;
+            case 3: BuildConversionPage(); break;
         }
-        StatusText.Text = page switch
+        SetStatus(page switch
         {
-            0 => "Primero confirmaremos qué USB es cuál.",
-            1 => "La consola solo escucha hasta que elijas capturar diagnóstico.",
-            2 => "La revisión protege el firmware y los datos del appliance.",
-            3 => _imageVerified ? "Imagen verificada con clave de publicación fijada." : "La imagen todavía no está verificada.",
-            4 => "La grabación borra únicamente el USB seleccionado.",
-            _ => "Respaldar, instalar y verificar el arranque desde la memoria interna."
-        };
+            0 => _selectedDisk is null ? "Selecciona el USB que vas a usar." : "USB seleccionado.",
+            1 => _imageVerified ? "OPNsense está listo para grabar." : "Descarga y comprueba la imagen.",
+            2 => "Revisa la unidad antes de grabar.",
+            _ => "Empieza por conectar y respaldar tu Edge."
+        });
     }
 
     private void BuildStartPage()
     {
-        PageHost.Children.Add(Card("Qué hará este asistente", "Te guiará para revisar el PC, identificar el USB, observar la consola serial, preparar una imagen oficial verificada y después convertir el Edge con controles. No cambia nada hasta que la pantalla de grabación te pida confirmar el borrado del USB."));
-        PageHost.Children.Add(Notice("Seguridad primero", "El firmware y la memoria interna del Edge no se modificarán en esta fase. Primero veremos la identidad exacta, la compatibilidad y las opciones reales de recuperación.", "#E3F4F0", "#0B675D"));
         var card = NewCard();
-        AddTitle(card, "1 · Comprobar el PC y localizar el USB");
-        AddText(card, "Conecta la memoria de instalación al PC. Pulsa el botón y compara el modelo, la capacidad y el número de serie con la etiqueta de la unidad.", true);
-        _diskPicker = new ComboBox { MinHeight = 38, FontSize = 14, Margin = new Thickness(0, 12, 0, 10), DisplayMemberPath = "Display" };
-        card.Children.Add(_diskPicker);
-        AddText(card, "Serie de USB esperada (la comprobamos antes de grabar)", false, 11, "#718096");
-        _serialId = new TextBox { Text = _targetSerial, MinHeight = 38, FontSize = 14, Padding = new Thickness(10, 8, 10, 8), ToolTip = "Escribe el número de serie que muestra la etiqueta o la información del fabricante" };
-        _serialId.TextChanged += (_, _) => { _targetSerial = _serialId.Text.Trim(); };
-        card.Children.Add(_serialId);
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
-        var scan = PrimaryButton("Analizar PC y unidades USB");
-        scan.Click += async (_, _) => await ScanDisksAsync();
-        row.Children.Add(scan);
-        var refresh = QuietButton("Actualizar puertos COM");
-        refresh.Click += (_, _) => { if (_comPicker is not null) LoadComPorts(_comPicker); SetStatus("Lista de puertos COM actualizada."); };
-        row.Children.Add(refresh);
-        card.Children.Add(row);
+        AddTitle(card, "Conecta el USB al PC");
+        AddText(card, "Selecciona la memoria que usarás para instalar OPNsense.", true);
+        var selected = new TextBlock
+        {
+            Text = _selectedDisk?.Label ?? "Ninguna unidad seleccionada",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 16,
+            Margin = new Thickness(0, 20, 0, 20)
+        };
+        card.Children.Add(selected);
+        var choose = PrimaryButton("Seleccionar USB…");
+        choose.Click += async (_, _) =>
+        {
+            choose.IsEnabled = false;
+            try
+            {
+                await SelectUsbAsync();
+                selected.Text = _selectedDisk?.Label ?? "Ninguna unidad seleccionada";
+            }
+            finally { choose.IsEnabled = true; }
+        };
+        card.Children.Add(choose);
         PageHost.Children.Add(card);
-        if (_disks.Count > 0 && _diskPicker is not null) BindDisks(_diskPicker);
-        if (!string.IsNullOrWhiteSpace(_selectedDisk?.Serial)) _serialId.Text = _selectedDisk.Serial;
-        PageHost.Children.Add(Notice("Tu información privada", "El informe se guarda únicamente en este PC, dentro de %LOCALAPPDATA%\\GeorgeValdez\\Edge510OPNsense. No se envía a ninguna página web.", "#EEF2FF", "#334E86"));
     }
 
-    private void BuildSerialPage()
+    private Expander BuildSerialHelp()
     {
-        PageHost.Children.Add(Card("Consola serial COM5 · 115200 8N1", "Elige el puerto que ya usas para ver `vc-edge login:`. Al conectar, la aplicación solo recibe texto; no inicia sesión ni envía contraseñas."));
-        var card = NewCard();
-        AddTitle(card, "Conexión de solo escucha");
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
         var row = new StackPanel { Orientation = Orientation.Horizontal };
-        _comPicker = new ComboBox { Width = 200, MinHeight = 38, FontSize = 14, Margin = new Thickness(0, 0, 10, 0) };
+        _comPicker = new ComboBox { Width = 160, MinHeight = 38, Margin = new Thickness(0, 0, 12, 0) };
         LoadComPorts(_comPicker);
         row.Children.Add(_comPicker);
-        var connect = PrimaryButton(_serial?.IsOpen == true ? "Desconectar" : "Conectar y escuchar");
+        var connect = PrimaryButton(_serial?.IsOpen == true ? "Desconectar" : "Conectar consola");
         connect.Click += (_, _) => ToggleSerial(connect);
         row.Children.Add(connect);
-        card.Children.Add(row);
-        _serialLog = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Height = 245, FontFamily = new FontFamily("Consolas"), FontSize = 12, Background = new SolidColorBrush(Color.FromRgb(20, 33, 39)), Foreground = new SolidColorBrush(Color.FromRgb(213, 230, 226)), Padding = new Thickness(13), Margin = new Thickness(0, 15, 0, 8) };
-        _serialLog.Text = "La salida de la consola aparecerá aquí cuando conectes COM5.\r\n";
-        card.Children.Add(_serialLog);
-        var capture = QuietButton("Ya inicié sesión: capturar inventario de solo lectura");
-        capture.Margin = new Thickness(0, 4, 0, 0);
-        capture.Click += async (_, _) => await CaptureInventoryAsync();
-        card.Children.Add(capture);
-        PageHost.Children.Add(card);
-        var loginHelp = new Expander
+        panel.Children.Add(row);
+        _serialLog = new TextBox
         {
-            Header = "¿Cómo inicio sesión en mi Edge 510?",
-            Margin = new Thickness(0, 0, 0, 14),
-            Content = Card("Acceso local de fábrica",
-                "Si tu unidad conserva las credenciales de fábrica, el usuario es root y la contraseña sigue el formato VeloHelloXXX. Sustituye XXX por los últimos tres caracteres del número de serie de la etiqueta inferior del Edge. Si ya cambiaste la contraseña, usa la actual. Para iniciar sesión en otra terminal, desconecta aquí el puerto COM y vuelve a conectarlo después.")
+            IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Height = 180,
+            FontFamily = new FontFamily("Consolas"), FontSize = 12, Margin = new Thickness(0, 12, 0, 12)
         };
-        PageHost.Children.Add(loginHelp);
-        PageHost.Children.Add(Notice("Antes de capturar", "Para consultar CPU, memoria, discos, BIOS y tarjetas de red debes iniciar sesión con una cuenta autorizada en la consola. Hazlo tú mismo en el Edge; la app no conoce ni guarda la contraseña. El comando enviado después es solo de consulta.", "#FFF4DE", "#805A16"));
-    }
-
-    private void BuildFirmwarePage()
-    {
-        PageHost.Children.Add(Card("Perfil del Edge 510",
-            "La instalación interna comprueba automáticamente la placa EDGE510, el BIOS VELOCLOUD-EDGE-01.00.00.05 y la memoria Generic Ultra HS-COMBO de 7,125 GiB. También exige que el sistema haya arrancado desde el USB de instalación."));
-        PageHost.Children.Add(Card("Preparación del hardware",
-            "La consola del Edge usa UART1 a 0x2F8 y 115200 8N1. El asistente adapta la imagen Serial para esa consola. Antes del respaldo y la instalación, guarda los valores originales del watchdog del PIC, lo desactiva y verifica su lectura. El instalador UFS y el servicio de luces quedan preparados para el arranque interno."));
-        PageHost.Children.Add(Card("Qué conservar",
-            "El paso de instalación guarda el disco de fábrica completo, su SHA-256, la configuración original del PIC y los registros de la sesión. Consérvalos fuera del repositorio público porque pueden contener información privada de tu unidad."));
+        panel.Children.Add(_serialLog);
+        var capture = QuietButton("Capturar diagnóstico");
+        capture.Click += async (_, _) => await CaptureInventoryAsync();
+        panel.Children.Add(capture);
+        panel.Children.Add(Details("Ayuda para iniciar sesión",
+            "En el Linux de fábrica, usa root y la contraseña VeloHelloXXX. XXX son los últimos tres caracteres de la serie de la etiqueta inferior. Si la contraseña fue cambiada, utiliza la actual. En el USB de OPNsense, usa root y opnsense. La consola funciona a 115200 8N1."));
+        return new Expander { Header = "Consola y diagnóstico", Content = panel, Margin = new Thickness(0, 10, 0, 10) };
     }
 
     private void BuildImagePage()
     {
-        PageHost.Children.Add(Card("Imagen serial oficial", "El Edge ya se administra por consola serial a 115200. Por eso el candidato para arrancar la instalación es la imagen `serial-amd64` de OPNsense. La app consulta la versión estable publicada y comprueba la firma del archivo antes de permitir grabarlo."));
         var card = NewCard();
-        AddTitle(card, "Descargar y comprobar");
-        AddText(card, "Origen: pkg.opnsense.org · arquitectura amd64 · consola 115200. La firma RSA se verifica con la clave pública de la versión fijada en esta compilación.", true);
-        var download = PrimaryButton(_imageVerified ? "Imagen verificada · descargar de nuevo" : "Descargar y verificar imagen oficial");
-        download.Margin = new Thickness(0, 15, 0, 12);
-        download.Click += async (_, _) => await DownloadAndVerifyAsync();
+        AddTitle(card, "Descarga la imagen oficial");
+        AddText(card, "El asistente comprueba la firma y prepara la consola del Edge.", true);
+        var download = PrimaryButton(_imageVerified ? "Comprobar de nuevo" : "Descargar OPNsense");
+        download.Margin = new Thickness(0, 16, 0, 16);
+        download.Click += async (_, _) => await RunMediaAsync(DownloadAndVerifyAsync);
         card.Children.Add(download);
-        _mediaStatus = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 90, Padding = new Thickness(12), Background = new SolidColorBrush(Color.FromRgb(246, 248, 249)), BorderBrush = new SolidColorBrush(Color.FromRgb(227, 233, 235)), FontSize = 12, Text = _imageVerified ? $"Verificada: {_imageFile}" : "Aún no se ha descargado la imagen.\r\nNo se grabará un archivo cuya versión, clave o firma no coincida." };
+        _mediaStatus = new TextBox
+        {
+            IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap,
+            MinHeight = 90, MaxHeight = 140, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            Padding = new Thickness(12), FontSize = 13,
+            Text = _imageVerified ? "Imagen comprobada y lista para el USB." : "La descarga todavía no ha comenzado."
+        };
         card.Children.Add(_mediaStatus);
         PageHost.Children.Add(card);
-        PageHost.Children.Add(Notice("Acerca del tamaño del disco interno", "Este paso prepara solo el USB. Antes de instalar en la memoria del Edge comprobaremos la capacidad real y la salud del almacenamiento. Si la unidad interna es de 8 GB, no asumir que la imagen completa cabe: la documentación de OPNsense recomienda más espacio y el perfil embebido requiere compatibilidad confirmada.", "#FFF4DE", "#805A16"));
+        PageHost.Children.Add(Details("Detalles de la imagen", "OPNsense Serial amd64. La firma del original se comprueba con la clave de publicación. La copia para Edge 510 usa la consola UART1 a 115200 y se verifica por SHA-256."));
     }
 
     private void BuildUsbPage()
     {
-        PageHost.Children.Add(Card("Crear la memoria de arranque", "Al grabar la imagen se borrará el USB elegido. La aplicación revisa otra vez que sea extraíble, de tipo USB, coincida el número de serie y tenga espacio. Luego lee los datos escritos para comprobarlos."));
         var card = NewCard();
-        AddTitle(card, "Unidad que va a borrarse");
-        AddText(card, _selectedDisk is null ? "Vuelve al paso 1, analiza las unidades y selecciona el USB." : _selectedDisk.Display, true);
-        var write = PrimaryButton("Grabar imagen en el USB");
-        write.Margin = new Thickness(0, 14, 0, 0);
+        AddTitle(card, "Revisa la unidad seleccionada");
+        AddText(card, _selectedDisk?.Label ?? "Primero selecciona tu USB en el paso 1.", true);
+        AddText(card, "Al continuar se borrará todo el contenido de este USB.", true, 14, "#9B3B35");
+        var write = PrimaryButton("Grabar y verificar USB");
+        write.Margin = new Thickness(0, 18, 0, 0);
         write.IsEnabled = _imageVerified && _selectedDisk is not null && string.Equals(_targetSerial, _selectedDisk.Serial, StringComparison.OrdinalIgnoreCase);
-        write.Click += async (_, _) => await WriteUsbAsync();
+        write.Click += async (_, _) => await RunMediaAsync(WriteUsbAsync);
         card.Children.Add(write);
         PageHost.Children.Add(card);
-        PageHost.Children.Add(Notice("Antes de pulsar grabar", "Desconecta los demás discos externos. Cierra el Explorador si tiene abierta la memoria. La siguiente pantalla mostrará de nuevo modelo, serie y capacidad y te pedirá escribir la frase exacta de borrado.", "#FCEBEA", "#9B3B35"));
+        PageHost.Children.Add(Details("Después de grabar", "Cuando termine la verificación, apaga el Edge, coloca el USB y enciéndelo con la consola conectada. Continúa con la instalación interna."));
     }
 
     private bool internalBusy;
@@ -221,7 +208,7 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
     private void BuildConversionPage()
     {
         PageHost.Children.Add(Card("Instalar en la memoria interna",
-            "Arranca el Edge desde el USB Serial y conéctalo a una red de administración. Preparar comprueba la placa y el destino, guarda la configuración del PIC, desactiva su watchdog y respalda el disco. Instalar borra el destino confirmado y ejecuta el instalador oficial UFS. Al terminar, retira el USB del Edge apagado y vuelve a encenderlo."));
+            "Coloca el USB en el Edge, enciéndelo y conéctalo a la red. Primero guardaremos un respaldo; después podrás autorizar la instalación."));
         var card = NewCard();
         AddTitle(card, "Conectar con OPNsense");
         var address = new TextBox { Text = "192.168.1.1", MinHeight = 32, Margin = new Thickness(0, 5, 0, 8) };
@@ -238,9 +225,9 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
         };
         card.Children.Add(pcNetwork);
         var report = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 10) };
-        var prepare = PrimaryButton("Preparar Edge y guardar respaldo");
-        var install = PrimaryButton("Instalar OPNsense dentro del Edge");
-        var verify = PrimaryButton("Verificar el arranque interno sin USB");
+        var prepare = PrimaryButton("1. Conectar y respaldar");
+        var install = PrimaryButton("2. Instalar OPNsense");
+        var verify = PrimaryButton("3. Comprobar sin USB");
         verify.IsEnabled = false;
         install.IsEnabled = false;
         var confirmation = new CheckBox
@@ -346,28 +333,87 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
         card.Children.Add(install);
         card.Children.Add(verify);
         PageHost.Children.Add(card);
-        PageHost.Children.Add(Card("Qué significa la luz",
+        PageHost.Children.Add(Details("Qué significa la luz",
             "Durante la preparación de OPNsense, azul, violeta y ámbar en respiración. Verde cuando responde la web y hay enlace LAN. Ámbar cuando falta enlace LAN. Rojo cuando falla la web o se detecta un problema con el PIC. Antes de iniciar OPNsense, la luz depende del firmware."));
+        PageHost.Children.Add(BuildSerialHelp());
     }
 
-    private async Task ScanDisksAsync()
+    private async Task SelectUsbAsync()
     {
-        SetStatus("Analizando unidades conectadas…");
+        SetStatus("Buscando unidades USB…");
         try
         {
             _disks = await Task.Run(ReadDisks);
-            if (_diskPicker is not null) BindDisks(_diskPicker);
-            var report = new { createdUtc = DateTime.UtcNow, ports = SerialPort.GetPortNames(), disks = _disks.Select(d => new { d.Number, d.Model, d.Serial, d.Bus, d.SizeBytes, d.Letters }) };
-            var path = Path.Combine(AppFolder, $"revision-pc-{DateTime.Now:yyyyMMdd-HHmmss}.json");
-            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
-            SetStatus($"Análisis listo. Informe local: {path}");
+            var picker = new Window
+            {
+                Owner = this, Title = "Seleccionar unidad USB", Width = 580, Height = 420,
+                MinWidth = 480, MinHeight = 360, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Brushes.White, ShowInTaskbar = false
+            };
+            var grid = new Grid { Margin = new Thickness(20) };
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var heading = new TextBlock { Text = _disks.Count == 0 ? "Conecta una memoria USB y pulsa Actualizar." : "Elige la memoria que vas a usar.", Margin = new Thickness(0, 0, 0, 12), TextWrapping = TextWrapping.Wrap };
+            grid.Children.Add(heading);
+            var list = new ListBox { ItemsSource = _disks, DisplayMemberPath = "Label", Padding = new Thickness(6) };
+            Grid.SetRow(list, 1);
+            grid.Children.Add(list);
+            var detail = new TextBlock { Margin = new Thickness(0, 12, 0, 12), Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap };
+            Grid.SetRow(detail, 2);
+            grid.Children.Add(detail);
+            var footer = new DockPanel();
+            Grid.SetRow(footer, 3);
+            var refresh = QuietButton("Actualizar");
+            refresh.Click += async (_, _) =>
+            {
+                refresh.IsEnabled = false;
+                try
+                {
+                    _disks = await Task.Run(ReadDisks);
+                    list.ItemsSource = _disks;
+                    heading.Text = _disks.Count == 0 ? "No se encontró una unidad USB disponible." : "Elige la memoria que vas a usar.";
+                }
+                catch (Exception ex) { heading.Text = ex.Message; }
+                finally { refresh.IsEnabled = true; }
+            };
+            DockPanel.SetDock(refresh, Dock.Left);
+            footer.Children.Add(refresh);
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var cancel = QuietButton("Cancelar");
+            cancel.Margin = new Thickness(12, 0, 10, 0);
+            cancel.Click += (_, _) => picker.DialogResult = false;
+            var select = PrimaryButton("Seleccionar");
+            select.MinWidth = 110;
+            select.IsEnabled = false;
+            select.Click += (_, _) => picker.DialogResult = true;
+            buttons.Children.Add(cancel);
+            buttons.Children.Add(select);
+            footer.Children.Add(buttons);
+            grid.Children.Add(footer);
+            list.SelectionChanged += (_, _) =>
+            {
+                select.IsEnabled = list.SelectedItem is DiskInfo d && !string.IsNullOrWhiteSpace(d.Serial);
+                detail.Text = list.SelectedItem is DiskInfo selected
+                    ? (string.IsNullOrWhiteSpace(selected.Serial) ? "Windows no pudo leer la serie de esta unidad." : "Serie " + selected.Serial)
+                    : "";
+            };
+            picker.Content = grid;
+            if (picker.ShowDialog() == true && list.SelectedItem is DiskInfo disk)
+            {
+                _selectedDisk = disk;
+                _targetSerial = disk.Serial;
+                SetStatus("USB seleccionado. Continúa con OPNsense.");
+            }
+            else SetStatus(_selectedDisk is null ? "Selecciona un USB para continuar." : "USB seleccionado.");
         }
-        catch (Exception ex) { SetStatus("No se pudo completar el análisis: " + ex.Message); }
+        catch (Exception ex) { SetStatus("No se pudo buscar el USB. " + ex.Message); }
     }
 
     private static List<DiskInfo> ReadDisks()
     {
-        const string command = "$ErrorActionPreference='Stop'; Get-Disk | Where-Object { $_.BusType -eq 'USB' -and -not $_.IsBoot -and -not $_.IsSystem -and -not $_.IsReadOnly -and -not $_.IsOffline } | ForEach-Object { $d=$_; $v=@(Get-Partition -DiskNumber $d.Number -ErrorAction SilentlyContinue | Get-Volume -ErrorAction SilentlyContinue | Where-Object DriveLetter | ForEach-Object { $_.DriveLetter }); [pscustomobject]@{ Number=$d.Number; Serial=([string]$d.SerialNumber).Trim(); Model=$d.FriendlyName; Bus=$d.BusType.ToString(); SizeBytes=[long]$d.Size; Letters=($v -join ',') } } | ConvertTo-Json -Compress";
+        const string command = "$ErrorActionPreference='Stop'; Get-Disk | Where-Object { $_.BusType -eq 'USB' -and $_.Size -gt 0 -and -not $_.IsBoot -and -not $_.IsSystem -and -not $_.IsReadOnly -and -not $_.IsOffline } | ForEach-Object { $d=$_; $v=@(Get-Partition -DiskNumber $d.Number -ErrorAction SilentlyContinue | Get-Volume -ErrorAction SilentlyContinue | Where-Object DriveLetter | ForEach-Object { $_.DriveLetter }); [pscustomobject]@{ Number=$d.Number; Serial=([string]$d.SerialNumber).Trim(); Model=$d.FriendlyName; Bus=$d.BusType.ToString(); SizeBytes=[long]$d.Size; Letters=($v -join ',') } } | ConvertTo-Json -Compress";
         var ps = Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe");
         var start = new ProcessStartInfo(ps) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
         start.ArgumentList.Add("-NoProfile"); start.ArgumentList.Add("-NonInteractive"); start.ArgumentList.Add("-Command"); start.ArgumentList.Add(command);
@@ -381,27 +427,6 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
     }
 
     private static string Clean(string? s) => (s ?? "").Trim();
-    private void BindDisks(ComboBox picker)
-    {
-        picker.ItemsSource = null;
-        picker.ItemsSource = _disks;
-        var preferred = _selectedDisk is null ? -1 : _disks.FindIndex(d => d.Number == _selectedDisk.Number && d.Serial == _selectedDisk.Serial);
-        picker.SelectedIndex = preferred >= 0 ? preferred : (_disks.Count == 1 ? 0 : -1);
-        if (picker.SelectedItem is DiskInfo initiallySelected)
-        {
-            _selectedDisk = initiallySelected;
-            if (_serialId is not null && string.IsNullOrWhiteSpace(_serialId.Text)) _serialId.Text = initiallySelected.Serial;
-        }
-        picker.SelectionChanged += (_, _) =>
-        {
-            if (picker.SelectedItem is DiskInfo d)
-            {
-                _selectedDisk = d;
-                if (_serialId is not null && string.IsNullOrWhiteSpace(_serialId.Text)) _serialId.Text = d.Serial;
-            }
-        };
-    }
-
     private static void LoadComPorts(ComboBox combo)
     {
         combo.ItemsSource = SerialPort.GetPortNames().OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -490,7 +515,7 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
             var configuredImage = await Task.Run(() => SerialImage.Prepare(imgPath, imageHash));
             _verifiedImageHash = SerialImage.PatchedHash;
             _imageFile = configuredImage; _imageSignatureFile = sigPath; _imageVerified = true;
-            _mediaStatus.Text = $"PREPARADA\r\nVersión: {version}\r\nTipo: serial amd64, consola UART1\r\nOrigen: {OfficialMirror}\r\nFirma del original RSA-SHA256 válida\r\nAdaptación local UART1 verificada por SHA-256: {SerialImage.PatchedHash}\r\nArchivo: {configuredImage}";
+            _mediaStatus.Text = $"OPNsense {version} está listo para grabar.\r\nFirma oficial válida y consola del Edge preparada.";
             SetStatus("Imagen oficial descomprimida y firma verificada correctamente.");
             SaveMediaManifest(version, imageHash, bzUrl, sigUrl);
         }
@@ -562,6 +587,22 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
         return new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
     }
 
+    private async Task RunMediaAsync(Func<Task> operation)
+    {
+        if (mediaBusy || internalBusy) return;
+        mediaBusy = true;
+        PageHost.IsEnabled = false;
+        foreach (var button in new[] { Nav1, Nav2, Nav3, Nav4, BackButton, NextButton }) button.IsEnabled = false;
+        try { await operation(); }
+        finally
+        {
+            mediaBusy = false;
+            PageHost.IsEnabled = true;
+            foreach (var button in new[] { Nav1, Nav2, Nav3, Nav4, NextButton }) button.IsEnabled = true;
+            BackButton.IsEnabled = _page > 0;
+        }
+    }
+
     private void SetStatus(string value) { Dispatcher.Invoke(() => StatusText.Text = value); }
     private CardContainer NewCard() => new() { Background = (Brush)FindResource("Card"), CornerRadius = new CornerRadius(14), Padding = new Thickness(22), Margin = new Thickness(0, 0, 0, 15), BorderBrush = (Brush)FindResource("Line"), BorderThickness = new Thickness(1) };
     private Border Card(string title, string body) { var c = NewCard(); AddTitle(c, title); AddText(c, body, true); return c; }
@@ -574,6 +615,17 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
         var s = new StackPanel(); s.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.Bold, FontSize = 14, Foreground = (Brush)new BrushConverter().ConvertFromString(fore)! });
         s.Children.Add(new TextBlock { Text = body, TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 20, Margin = new Thickness(0, 5, 0, 0), Foreground = new SolidColorBrush(Color.FromRgb(59, 72, 78)) }); b.Child = s; return b;
     }
+    private static Expander Details(string title, string text) => new()
+    {
+        Header = title,
+        Margin = new Thickness(0, 8, 0, 14),
+        Content = new TextBlock
+        {
+            Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13, LineHeight = 21,
+            Foreground = new SolidColorBrush(Color.FromRgb(73, 91, 100)),
+            Margin = new Thickness(0, 12, 0, 0)
+        }
+    };
     private Button PrimaryButton(string text) => new() { Content = text, HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 180 };
     private Button QuietButton(string text) => new() { Content = text, Style = (Style)FindResource("QuietButton"), HorizontalAlignment = HorizontalAlignment.Left };
 
@@ -585,6 +637,7 @@ rpQyNglY7Jqme/RipzbYia8CAwEAAQ==
 
     private sealed record DiskInfo(int Number, string Serial, string Model, string Bus, long SizeBytes, string Letters)
     {
+        public string Label => $"{(string.IsNullOrWhiteSpace(Letters) ? "Sin letra" : Letters + ":")} · {Model} · {SizeBytes / 1073741824d:0.0} GiB";
         public string Display => $"Disco {Number} · {Model} · {Bus} · {SizeBytes / 1073741824d:0.00} GiB · Serie {Serial} · Volúmenes {Letters}";
     }
 }

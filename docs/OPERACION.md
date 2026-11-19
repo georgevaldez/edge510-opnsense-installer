@@ -1,38 +1,36 @@
 # Guía de operación
 
-## 1. Auditoría previa
+## 1. Elegir USB
 
-Abre `release/Edge510-OPNsense-Installer.exe`. Pulsa **Analizar PC y unidades USB** y elige la memoria por serie, modelo, capacidad y letras asociadas. El número de disco puede cambiar; por eso se vuelve a comprobar antes de grabar.
+Abre `Edge510-OPNsense-Installer.exe` y pulsa **Seleccionar USB…**. En la ventana de Windows, elige la memoria por modelo, capacidad y letra; revisa también su serie. Si no aparece, conéctala y pulsa **Actualizar**. Los discos del sistema quedan excluidos. El número de disco puede cambiar: el asistente comprueba de nuevo la identidad antes de escribir.
 
-## 2. Recoger evidencia serial
+## 2. Descargar OPNsense
 
-En la pantalla **Diagnóstico serial**, conecta el puerto a 115200 8N1. La app solo escucha hasta que pulses captura. Inicia sesión tú mismo con credenciales autorizadas; después confirma el envío del comando fijo de inventario de solo lectura. No se guardan contraseñas. Los datos quedan en `%LOCALAPPDATA%\GeorgeValdez\Edge510OPNsense`.
+Pulsa **Descargar OPNsense**. El asistente descarga la imagen Serial oficial, comprueba la firma RSA-SHA256 y prepara una copia para UART1. Si la versión o la clave publicada difiere de la clave 26.7 fijada en el programa, se detiene. Consulta **Detalles de la imagen** si necesitas más información.
 
-## 3. Revisar compatibilidad
+## 3. Crear USB
 
-Adjunta un informe que contenga la revisión de placa, versión BIOS, CPU, memoria, discos, PCI IDs de NIC, respaldo del firmware y método de recuperación. Una casilla marcada no hace una validación técnica: sirve para documentar la revisión. Aún no instales; una imagen que inicia no prueba que los drivers NIC/almacenamiento funcionen ni que la consola serial permanezca accesible.
+Revisa la unidad y pulsa **Grabar y verificar USB**. Confirma el borrado escribiendo la frase indicada. La grabación requiere ejecutar la aplicación como administrador. Si falla el bloqueo del dispositivo o la lectura de verificación, se detiene. Espera el mensaje de verificación antes de retirar la memoria.
 
-## 4. Obtener y validar imagen
+## 4. Instalar en el Edge
 
-Pulsa **Descargar y verificar imagen oficial**. La app consulta el README del mirror para detectar la versión estable, comprueba que la clave publicada coincide exactamente con la clave 26.7 fijada en el ejecutable, descarga el archivo y su firma, descomprime y verifica RSA-SHA256. Si la versión o la clave ha cambiado, se detiene y hay que actualizar/recompilar el programa desde una fuente confiable.
-
-## 5. Grabar USB (destructivo solo para el USB)
-
-Tras verificar la imagen, ve a **Crear USB**. Confirma que la unidad mostrada es la correcta y que no hay otros discos USB conectados. Acepta la advertencia y escribe la frase exacta. Windows pedirá permisos elevados para grabar. Si Windows no puede bloquear/desmontar el volumen o falla la lectura posterior, se detiene y reporta error. Solo se escribe el dispositivo USB identificado.
-
-## 6. Instalar dentro del Edge
-
-Arranca con el USB Serial y asigna una dirección de administración accesible desde el PC. En **Convertir el appliance**, introduce esa dirección y la contraseña de root. La contraseña del live nuevo es `opnsense`.
+Arranca con el USB Serial y asigna una dirección de administración accesible desde el PC. En **Instalar en el Edge**, introduce esa dirección y la contraseña de root. La contraseña del live nuevo es `opnsense`.
 
 La opción de red de administración usa la puerta de enlace y los DNS del adaptador del PC que comparte la subred del Edge, y conserva el DHCP existente de esa LAN desactivando el servidor DHCP de la LAN del Edge. Revisa esa opción antes de preparar la instalación.
 
-Pulsa **Preparar Edge y guardar respaldo**. El asistente comprueba el modelo EDGE510, el firmware 01.00.00.05, el arranque desde el medio de instalación y la memoria de fábrica Generic Ultra HS-COMBO de 7,125 GiB. Guarda la configuración original del PIC y desactiva su watchdog en EEPROM y en el contador activo. Después copia el disco completo al PC y compara su SHA-256 con una segunda lectura desde el Edge. Esta fase puede tardar por la velocidad de la memoria interna.
+Pulsa **1. Conectar y respaldar**. El asistente comprueba el modelo EDGE510, el firmware 01.00.00.05, el arranque desde el medio de instalación y la memoria de fábrica Generic Ultra HS-COMBO de 7,125 GiB. Guarda la configuración original del PIC y desactiva su watchdog en EEPROM y en el contador activo. Después copia el disco completo al PC y compara su SHA-256 con una segunda lectura desde el Edge. Esta fase puede tardar por la velocidad de la memoria interna.
 
-Revisa el modelo, la serie y la ruta del respaldo. Marca la autorización de borrado y pulsa **Instalar OPNsense dentro del Edge**. El programa ejecuta el instalador oficial UFS, selecciona el destino identificado e instala la consola UART1 y el indicador de estado. Conserva la configuración de administración del entorno live. El respaldo y los registros quedan en la carpeta local de esa sesión.
+Revisa el modelo, la serie y la ruta del respaldo. Marca la autorización de borrado y pulsa **2. Instalar OPNsense**. El programa ejecuta el instalador oficial UFS, selecciona el destino identificado e instala la consola UART1 y el indicador de estado. Conserva la configuración de administración del entorno live. El respaldo y los registros quedan en la carpeta local de esa sesión.
 
-Cuando termine el apagado, retira el USB del Edge y enciéndelo. Pulsa **Verificar el arranque interno sin USB**. Se comprueban el dispositivo raíz, la serie del disco, las cuatro interfaces Intel, la web por HTTPS y el watchdog desactivado durante más de diez minutos con el mismo arranque.
+Cuando termine el apagado, retira el USB del Edge y enciéndelo. Pulsa **3. Comprobar sin USB**. Se comprueban el dispositivo raíz, la serie del disco, las cuatro interfaces Intel, la web por HTTPS y el watchdog desactivado durante más de diez minutos con el mismo arranque.
 
 El perfil automatizado cubre esta revisión y este modelo de memoria de fábrica. Una discrepancia detiene el proceso y deja el motivo en pantalla. Una instalación parcial necesita revisión del registro antes de reintentar el borrado.
+
+## Consola y diagnóstico opcionales
+
+En el paso 4, despliega **Consola y diagnóstico** para conectar el puerto COM a 115200 8N1. La app escucha hasta que pulses **Capturar diagnóstico** y confirmes el envío del inventario de solo lectura. Los registros quedan en `%LOCALAPPDATA%\GeorgeValdez\Edge510OPNsense`.
+
+La ayuda de acceso está en **Ayuda para iniciar sesión**: el Linux de fábrica usa `root` y `VeloHelloXXX`, donde `XXX` corresponde a los últimos tres caracteres de la serie inferior, salvo que se haya cambiado la contraseña. El medio live de OPNsense usa `root` y `opnsense`.
 
 ## Luz frontal
 
